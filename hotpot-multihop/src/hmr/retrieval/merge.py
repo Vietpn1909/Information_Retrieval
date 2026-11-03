@@ -59,5 +59,9 @@ def accumulate_scores(index: Index, terms: Iterable[tuple[str, Contribution]]) -
 
 
 def top_k(ids: Sequence[int], scores: Sequence[float], k: int) -> list[tuple[int, float]]:
-    """k cặp điểm cao nhất, giảm dần; hoà điểm thì doc_id nhỏ trước (tất định)."""
-    return heapq.nlargest(k, zip(ids, scores), key=lambda p: (p[1], -p[0]))
+    """k cặp điểm cao nhất, giảm dần; hoà điểm thì doc_id nhỏ trước (tất định).
+
+    Bỏ tài liệu điểm ≤ 0 (vd. idf xác suất bị chặn về 0): chúng không khớp truy vấn.
+    """
+    positive = ((d, s) for d, s in zip(ids, scores) if s > 0)
+    return heapq.nlargest(k, positive, key=lambda p: (p[1], -p[0]))

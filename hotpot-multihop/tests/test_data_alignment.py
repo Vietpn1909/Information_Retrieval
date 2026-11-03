@@ -3,6 +3,7 @@
 Tự skip nếu chưa chạy ``scripts/build_corpus.py``.
 """
 
+import hashlib
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -29,6 +30,15 @@ def corpus() -> list[dict[str, Any]]:
 @pytest.fixture(scope="module")
 def questions() -> list[dict[str, Any]]:
     return list(read_jsonl(PATHS["questions"]))
+
+
+@pytest.mark.parametrize("name", ["corpus", "questions", "qrels"])
+def test_data_matches_reference_checksum(name: str) -> None:
+    """Dữ liệu dựng lại phải trùng từng byte bản chuẩn (doc_id của mọi người khớp nhau)."""
+    digest = hashlib.md5(Path(PATHS[name]).read_bytes()).hexdigest()
+    assert digest == CFG["data"]["checksums"][name], (
+        f"{PATHS[name]} khác bản chuẩn — kiểm tra data.hf_revision / seed / n_train, rồi chạy lại build_corpus.py"
+    )
 
 
 def test_every_supporting_fact_aligns(corpus: list[dict[str, Any]], questions: list[dict[str, Any]]) -> None:

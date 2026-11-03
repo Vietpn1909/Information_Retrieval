@@ -1,0 +1,42 @@
+# [M2 – Việt] Truy xuất thưa — được gộp tự động vào config/default.yaml.
+
+paths:
+  sparse_dir: runs/sparse   # kết quả thí nghiệm truy xuất thưa [M2]
+
+retrievers:
+  # [M2] k1/b dò trên 5000 câu train, tối ưu R@100 (runs/sparse/tune_best.json)
+  bm25_tuned: &bm25_tuned
+    type: bm25
+    index: stem
+    k1: 0.9
+    b: 1.0
+  bm25_champion:      # champion list (IIR 7.1.3) + chấm lại chính xác bằng skip pointer
+    <<: *bm25_tuned
+    pruning: {kind: champion, r: 500, rescore: true}   # r=500: chọn theo runs/sparse/champion.csv
+  bm25_tiered:        # chỉ mục phân tầng (IIR 7.2.1)
+    <<: *bm25_tuned
+    pruning: {kind: tiered, fractions: [0.1, 0.3, 0.6], mode: per_term, rescore: true}
+
+# Thí nghiệm truy xuất thưa [M2 – Việt] — scripts/sparse_experiments.py
+sparse:
+  depth: 100              # độ sâu run của mọi thí nghiệm (cần cho R@100)
+  tune:                   # dò k1/b trên train, KHÔNG dùng dev
+    split: train
+    k1: [0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, 2.4]
+    b: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0]  # có 0.75 = điểm mặc định
+    objective: R@100
+    tiebreak: nDCG@10
+  smart_schemes: [lnc.ltc, ltc.ltc, lnc.lnc, nnc.ntc, bnc.btc, anc.atc, Lnc.ltc]
+  champion:
+    base: bm25_tuned      # cấu hình cung cấp index + k1/b
+    r: [50, 100, 200, 500, 1000]
+  tiered:
+    base: bm25_tuned
+    fractions: [[0.1, 0.3, 0.6], [0.2, 0.8], [0.05, 0.15, 0.8]]
+    modes: [per_term, global]
+    # Quy tắc dừng: xuống tầng tiếp theo khi số ứng viên < min_candidates (null = k, đúng như IIR)
+    min_candidates: [null, 5000]
+  skip:
+    n_pairs: 2000         # số cặp term lấy từ câu hỏi dev
+    steps: [sqrt, 2, 4, 8, 16, 32, 64]
+    seed: 42

@@ -1,0 +1,13 @@
+# Cổng T1: run do code mới tạo phải trùng từng byte với run cũ (dev 7405 câu, k=100)
+# runs/baseline_v0 = trước khi tách module; runs/t1_check = sau khi tách; factory_bm25 = qua factory mới
+31ad7d009dae4ce20d840abca5efd50d *runs/baseline_v0/bm25.txt
+fd12821b4d75c9dd6ad1ac9d376a8291 *runs/baseline_v0/bm25_nostem.txt
+8a4460610f85dd3160858d5685378dfe *runs/baseline_v0/tfidf.txt
+31ad7d009dae4ce20d840abca5efd50d *runs/t1_check/bm25.txt
+fd12821b4d75c9dd6ad1ac9d376a8291 *runs/t1_check/bm25_nostem.txt
+8a4460610f85dd3160858d5685378dfe *runs/t1_check/tfidf.txt
+31ad7d009dae4ce20d840abca5efd50d *runs/sparse/runs/factory_bm25.txt
+bm25: TRÙNG TỪNG BYTE
+tfidf: TRÙNG TỪNG BYTE
+bm25_nostem: TRÙNG TỪNG BYTE
+bm25 qua factory: TRÙNG TỪNG BYTE
