@@ -1,0 +1,65 @@
+# Cấu hình mặc định. Đường dẫn tương đối được quy theo gốc repo.
+# Không hardcode tham số trong code — thêm khoá mới vào đây.
+
+paths:
+  data_dir: data
+  corpus: data/corpus.jsonl
+  questions: data/questions.jsonl
+  qrels: data/qrels.txt
+  index_dir: data/index
+  runs_dir: runs
+
+data:
+  hf_name: hotpotqa/hotpot_qa
+  hf_config: distractor
+  n_train: 5000          # số câu hỏi lấy mẫu từ train
+  seed: 42
+  dev_split: validation  # tên split dev trên HuggingFace
+  # Lỗi gióng hàng supporting_facts -> doc_id: "error" dừng ngay; "drop" bỏ câu hỏi lỗi + log.
+  on_alignment_error: error
+
+# Biến thể chỉ mục (mỗi biến thể là một file data/index/<tên>.pkl).
+indexes:
+  stem:
+    stem: true
+    remove_stopwords: true
+    include_title: true   # chỉ mục "title + text"
+    codec: identity       # [M1] đổi thành delta_vbyte khi cài xong nén
+  nostem:
+    stem: false
+    remove_stopwords: true
+    include_title: true
+    codec: identity
+
+# Cấu hình truy xuất — tên khoá là giá trị của --config trong run_retrieval.py.
+retrievers:
+  bm25:
+    type: bm25
+    index: stem
+    k1: 1.2
+    b: 0.75
+  bm25_nostem:
+    type: bm25
+    index: nostem
+    k1: 1.2
+    b: 0.75
+  tfidf:
+    type: tfidf     # SMART lnc.ltc
+    index: stem
+
+retrieval:
+  top_k: 10
+
+eval:
+  # tên hiển thị -> measure của pytrec_eval
+  measures:
+    P@5: P_5
+    R@10: recall_10
+    MAP: map
+    nDCG@10: ndcg_cut_10
+    MRR: recip_rank
+  group_by: [type, level]
+
+analysis:
+  hop2_retriever: bm25
+  hop2_depth: 100
