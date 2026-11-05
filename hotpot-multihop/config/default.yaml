@@ -25,6 +25,7 @@ data:
     corpus: 6a139d161d2206c9648e05e98bf7f024
     questions: 8babcefff51d5115c77e6debd1f7ecbb
     qrels: 6bc5a4c6fc74d1d481ce31d1643c7824
+    stopwords: d02c3b301a4a751e3400b662986ce9fa  # 198 từ; nltk_data không pin version, lệch là chỉ mục lệch
 
 # Biến thể chỉ mục (mỗi biến thể là một file data/index/<tên>.pkl).
 indexes:

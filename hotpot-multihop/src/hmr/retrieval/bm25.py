@@ -24,4 +24,5 @@ class BM25Retriever(ExhaustiveRetriever):
         self.b = b
 
     def idf(self, term: str) -> float:
+        """idf của term (xem ``BM25Weighting.idf``)."""
         return self.bm25.idf(term)

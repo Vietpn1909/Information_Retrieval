@@ -60,6 +60,7 @@ class PrunedRetriever:
         raise NotImplementedError
 
     def search(self, query: str, k: int) -> list[tuple[int, float]]:
+        """Top-k trên tập ứng viên đã cắt tỉa; cập nhật ``last_stats``."""
         qw = self.weighting.query_weights(self.analyzer(query))
         terms = sorted(qw, key=self.index.df)  # cùng thứ tự với merge.accumulate_scores
         subsets = self.select(terms, k)

@@ -1,0 +1,16 @@
+{
+  "retriever": "bm25_tuned",
+  "depth": 100,
+  "n_bridge": 5918,
+  "hop2_method": {
+    "title_link": 4594,
+    "answer": 1037,
+    "ambiguous": 287
+  },
+  "n_evaluated": 5631,
+  "hop2_not_in_topK_pct": 19.215059492097318,
+  "hop1_not_in_topK_pct": 3.5340081690641094,
+  "any_gold_not_in_topK_pct": 22.535961640916355,
+  "both_not_in_topK_pct": 0.21310602024507191,
+  "median_hop2_rank_when_found": 3
+}

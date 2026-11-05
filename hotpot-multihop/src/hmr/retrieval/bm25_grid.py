@@ -43,6 +43,7 @@ class GridResult:
     top_ids: np.ndarray  # [len(k1s)·len(bs), số câu, depth] int32
 
     def configs(self) -> list[tuple[float, float]]:
+        """Các cặp (k1, b) theo đúng thứ tự chiều đầu của ``top_ids``."""
         return [(k1, b) for k1 in self.k1s for b in self.bs]
 
     def run(self, cfg_idx: int) -> Run:

@@ -32,7 +32,15 @@ from hmr.common.io import Qrels, read_jsonl, read_qrels, write_trec_run
 from hmr.common.log import setup_logging
 from hmr.eval.metrics import aggregate, evaluate_per_query
 from hmr.index.inverted import InvertedIndex
-from hmr.index.skip import IntersectStats, SkipPostings, build_skip_table, intersect, intersect_with_skips, resolve_step
+from hmr.index.skip import (
+    IntersectStats,
+    SkipPostings,
+    build_skip_table,
+    intersect,
+    intersect_with_skips,
+    resolve_step,
+    sample_term_pairs,
+)
 from hmr.retrieval.bm25_grid import evaluate_grid, grid_search, select_best
 from hmr.retrieval.champion import ChampionLists, ChampionRetriever
 from hmr.retrieval.factory import build_weighting, load_index
@@ -61,10 +69,12 @@ class Context:
         self._indexes: dict[str, InvertedIndex] = {}
 
     def questions(self, split: str) -> list[dict[str, Any]]:
+        """Câu hỏi của một split (đã cắt theo ``--limit``)."""
         qs = [q for q in self._questions if q["split"] == split]
         return qs[: self.limit] if self.limit else qs
 
     def index(self, name: str) -> InvertedIndex:
+        """Nạp chỉ mục theo tên, có cache."""
         if name not in self._indexes:
             self._indexes[name] = load_index(self.cfg, name)
         return self._indexes[name]
@@ -124,17 +134,18 @@ def run_config(
         row[f"{label.split('=')[1]}_R@100"] = round(vals["R@100"], 4)
     row["latency_ms_mean"] = round(statistics.fmean(lat), 2)
     row["latency_ms_p95"] = round(statistics.quantiles(lat, n=20)[-1], 2) if len(lat) > 1 else round(lat[0], 2)
-    for key, vals in cost.items():
-        if vals:
-            row[f"{key}_mean"] = round(statistics.fmean(vals), 1)
+    for key, values in cost.items():
+        if values:
+            row[f"{key}_mean"] = round(statistics.fmean(values), 1)
     if reference is not None:
-        for k in (10, 100):
+        for k in ctx.cfg["sparse"]["overlap_k"]:
             row[f"overlap@{k}"] = round(statistics.fmean(overlap(rankings[q], reference[q], k) for q in qids), 4)
     logger.info("%s: %s", name, {k: v for k, v in row.items() if k != "config"})
     return row, rankings
 
 
 def base_setup(ctx: Context, base: str) -> tuple[InvertedIndex, Any, dict[str, Any]]:
+    """Chỉ mục, mô hình trọng số và cấu hình của retriever ``base``."""
     rcfg = retriever_config(ctx.cfg, base)
     index = ctx.index(rcfg["index"])
     return index, build_weighting(index, rcfg), rcfg
@@ -142,6 +153,7 @@ def base_setup(ctx: Context, base: str) -> tuple[InvertedIndex, Any, dict[str, A
 
 # ------------------------------------------------------------------ lệnh con
 def cmd_tune(ctx: Context) -> None:
+    """Dò lưới k1/b trên train, ghi bm25_grid.csv + tune_best.json, kiểm tra chéo với BM25 vét cạn."""
     tcfg = ctx.cfg["sparse"]["tune"]
     rcfg = retriever_config(ctx.cfg, "bm25")
     index = ctx.index(rcfg["index"])
@@ -160,7 +172,7 @@ def cmd_tune(ctx: Context) -> None:
     # Kiểm tra chéo: lưới (numpy) phải trùng BM25 vét cạn tại điểm tốt nhất
     best_idx = grid.configs().index((best["k1"], best["b"]))
     check = ExhaustiveRetriever(index, index.analyze, build_weighting(index, {"type": "bm25", **best}))
-    n_check = min(300, len(queries))
+    n_check = min(int(tcfg["check_queries"]), len(queries))
     mismatches = sum(
         [d for d, _ in check.search(text, ctx.depth)] != [int(d) for d in grid.top_ids[best_idx, qi] if d >= 0]
         for qi, (_, text) in enumerate(queries[:n_check])
@@ -180,6 +192,7 @@ def cmd_tune(ctx: Context) -> None:
 
 
 def cmd_smart(ctx: Context) -> None:
+    """So sánh các sơ đồ SMART và BM25 trên dev, ghi smart.csv."""
     index = ctx.index(retriever_config(ctx.cfg, "tfidf")["index"])
     questions = ctx.questions("dev")
     rows = []
@@ -199,6 +212,7 @@ def _reference(ctx: Context, base: str, questions: Sequence[Mapping[str, Any]]) 
 
 
 def cmd_champion(ctx: Context) -> None:
+    """Champion list: r × {chấm lại, xấp xỉ} so với vét cạn, ghi champion.csv."""
     ccfg = ctx.cfg["sparse"]["champion"]
     questions = ctx.questions("dev")
     ref_row, ref = _reference(ctx, ccfg["base"], questions)
@@ -218,6 +232,7 @@ def cmd_champion(ctx: Context) -> None:
 
 
 def cmd_tiered(ctx: Context) -> None:
+    """Chỉ mục phân tầng: fractions × mode × min_candidates so với vét cạn, ghi tiered.csv."""
     tcfg = ctx.cfg["sparse"]["tiered"]
     questions = ctx.questions("dev")
     ref_row, ref = _reference(ctx, tcfg["base"], questions)
@@ -246,17 +261,14 @@ def _timed(fn: Callable[[], Any]) -> tuple[Any, float]:
 
 
 def cmd_skip(ctx: Context) -> None:
+    """Benchmark skip pointer theo bước nhảy trên hai kịch bản, ghi skip.csv."""
     scfg = ctx.cfg["sparse"]["skip"]
     index, weighting, _ = base_setup(ctx, ctx.cfg["sparse"]["champion"]["base"])
     questions = ctx.questions("dev")
     rng = random.Random(int(scfg["seed"]))
 
     # Kịch bản 1: giao hai postings (truy vấn AND hai term) lấy từ câu hỏi thật
-    pairs: set[tuple[str, str]] = set()
-    while len(pairs) < int(scfg["n_pairs"]):
-        terms = sorted({t for t in index.analyze(rng.choice(questions)["question"]) if index.df(t) > 0})
-        if len(terms) >= 2:
-            pairs.add(tuple(rng.sample(terms, 2)))  # type: ignore[arg-type]
+    pairs = sample_term_pairs(index, index.analyze, [q["question"] for q in questions], int(scfg["n_pairs"]), rng)
     lists = {t: [d for d, _ in index.postings(t)] for p in pairs for t in p}
     rows: list[dict[str, Any]] = []
     plain = IntersectStats()
@@ -271,11 +283,13 @@ def cmd_skip(ctx: Context) -> None:
         rows.append({"scenario": "AND 2 term", "step": spec, "comparisons": st.comparisons, "skips": st.skips,
                      "time_ms": round(t, 1), "mismatches": sum(x != y for x, y in zip(out, truth))})
 
-    # Kịch bản 2: tra tf của ứng viên (top-1000 BM25) trong postings đầy đủ — như bước chấm lại ở T4/T5
+    # Kịch bản 2: tra tf của ứng viên (top BM25) trong postings đầy đủ — như bước chấm lại ở T4/T5
+    top = int(scfg["lookup_top_k"])
+    scenario = f"tra ứng viên top-{top}"
     exhaustive = ExhaustiveRetriever(index, index.analyze, weighting)
     jobs: list[tuple[str, list[int]]] = []
-    for q in tqdm(questions[: int(scfg["n_pairs"]) // 4], desc="Ứng viên top-1000", unit="q", leave=False):
-        cands = sorted(d for d, _ in exhaustive.search(q["question"], 1000))
+    for q in tqdm(questions[: int(scfg["lookup_questions"])], desc=f"Ứng viên top-{top}", unit="q", leave=False):
+        cands = sorted(d for d, _ in exhaustive.search(q["question"], top))
         jobs += [(t, cands) for t in set(index.analyze(q["question"])) if index.df(t) > 0]
     full = {t: index.postings(t) for t, _ in jobs}
     truth2 = [[dict(full[t]).get(c, 0) for c in cands] for t, cands in jobs]
@@ -283,7 +297,7 @@ def cmd_skip(ctx: Context) -> None:
         table = {t: SkipPostings.from_postings(full[t], 1 if spec == "none" else spec) for t in full}
         st = IntersectStats()
         out, t = _timed(lambda: [table[term].lookup(cands, st) for term, cands in jobs])
-        rows.append({"scenario": "tra ứng viên top-1000", "step": spec, "comparisons": st.comparisons, "skips": st.skips,
+        rows.append({"scenario": scenario, "step": spec, "comparisons": st.comparisons, "skips": st.skips,
                      "time_ms": round(t, 1), "mismatches": sum(x != y for x, y in zip(out, truth2))})
     base_cmp = {s: next(r["comparisons"] for r in rows if r["scenario"] == s and r["step"] == "none") for s in {r["scenario"] for r in rows}}
     for r in rows:
@@ -300,6 +314,7 @@ COMMANDS: dict[str, Callable[[Context], None]] = {
 
 
 def main() -> None:
+    """Phân tích tham số rồi chạy lệnh con."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=[*COMMANDS, "all"])
     parser.add_argument("--limit", type=int, default=None, help="Chỉ chạy N câu đầu mỗi split (thử nhanh)")

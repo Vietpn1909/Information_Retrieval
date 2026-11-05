@@ -126,6 +126,7 @@ class SingleHopAdapter:
         self.config_name = config_name
 
     def search(self, question: str, k: int) -> RetrievalResult:
+        """Truy xuất một bước, đo latency, đóng gói thành ``RetrievalResult``."""
         t0 = perf_counter()
         ranking = self.retriever.search(question, k)
         latency = (perf_counter() - t0) * 1000

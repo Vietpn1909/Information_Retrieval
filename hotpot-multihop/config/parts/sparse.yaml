@@ -20,12 +20,14 @@ retrievers:
 # Thí nghiệm truy xuất thưa [M2 – Việt] — scripts/sparse_experiments.py
 sparse:
   depth: 100              # độ sâu run của mọi thí nghiệm (cần cho R@100)
+  overlap_k: [10, 100]    # các k đo độ trùng top-k với BM25 vét cạn
   tune:                   # dò k1/b trên train, KHÔNG dùng dev
     split: train
     k1: [0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, 2.4]
     b: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0]  # có 0.75 = điểm mặc định
     objective: R@100
     tiebreak: nDCG@10
+    check_queries: 300    # số câu kiểm tra chéo lưới numpy với BM25 vét cạn
   smart_schemes: [lnc.ltc, ltc.ltc, lnc.lnc, nnc.ntc, bnc.btc, anc.atc, Lnc.ltc]
   champion:
     base: bm25_tuned      # cấu hình cung cấp index + k1/b
@@ -38,5 +40,7 @@ sparse:
     min_candidates: [null, 5000]
   skip:
     n_pairs: 2000         # số cặp term lấy từ câu hỏi dev
+    lookup_questions: 500 # kịch bản tra ứng viên: số câu hỏi
+    lookup_top_k: 1000    # kịch bản tra ứng viên: lấy top-k BM25 làm ứng viên
     steps: [sqrt, 2, 4, 8, 16, 32, 64]
     seed: 42
