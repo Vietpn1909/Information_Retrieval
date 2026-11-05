@@ -72,4 +72,5 @@ class ChampionRetriever(PrunedRetriever):
         self.r = r
 
     def select(self, terms: Sequence[str], k: int) -> dict[str, Subset]:
+        """Mỗi term chỉ đóng góp champion list độ dài r."""
         return {t: self.lists.champions(t, self.r) for t in terms}

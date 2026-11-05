@@ -80,6 +80,7 @@ class TieredIndex:
 
     @property
     def n_tiers(self) -> int:
+        """Số tầng."""
         return len(self._tiers)
 
     def tier(self, i: int, term: str) -> Subset:
@@ -108,6 +109,7 @@ class TieredRetriever(PrunedRetriever):
         self.last_tiers_used = 0
 
     def select(self, terms: Sequence[str], k: int) -> dict[str, Subset]:
+        """Gộp dần từng tầng đến khi đủ ứng viên; ghi lại số tầng đã dùng."""
         need = self.min_candidates or k
         chosen: dict[str, tuple[list[int], list[int]]] = {t: ([], []) for t in terms}
         seen: set[int] = set()

@@ -33,6 +33,7 @@ class ExhaustiveRetriever:
         self.last_stats = SearchStats()
 
     def search(self, query: str, k: int) -> list[tuple[int, float]]:
+        """Top-k theo ``weighting``, duyệt toàn bộ postings; cập nhật ``last_stats``."""
         qw = self.weighting.query_weights(self.analyzer(query))
         terms = [(t, self.weighting.contribution(t, w)) for t, w in qw.items()]
         ids, scores = accumulate_scores(self.index, terms)

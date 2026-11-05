@@ -60,18 +60,22 @@ class BM25Weighting:
         self._len_norm = [k1 * (1 - b + b * index.doc_len(d) / avgdl) for d in range(self._n)]
 
     def idf(self, term: str) -> float:
+        """idf của term; không phụ thuộc k1, b."""
         df = self.index.df(term)
         return math.log(1 + (self._n - df + 0.5) / (df + 0.5))
 
     def query_weights(self, terms: Sequence[str]) -> dict[str, float]:
+        """w_q(t) = qtf · idf; bỏ term không có trong chỉ mục."""
         qtf = Counter(t for t in terms if self.index.df(t) > 0)
         return {t: c * self.idf(t) for t, c in qtf.items()}
 
     def impact_fn(self, term: str) -> ImpactFn:
+        """impact = tf·(k1+1) / (tf + k1·(1 − b + b·|d|/avgdl))."""
         k1p1, norm = self.k1 + 1, self._len_norm
         return lambda d, tf: tf * k1p1 / (tf + norm[d])
 
     def contribution(self, term: str, qw: float) -> Contribution:
+        """Closure qw · impact, gộp sẵn cho vòng chấm điểm nóng."""
         k1p1, norm = self.k1 + 1, self._len_norm
         return lambda d, tf: qw * tf * k1p1 / (tf + norm[d])
 
@@ -159,10 +163,11 @@ class SmartWeighting:
         return [math.sqrt(s) if s > 0 else 1.0 for s in sq]
 
     def query_weights(self, terms: Sequence[str]) -> dict[str, float]:
+        """Vectơ truy vấn theo ``query_code``; bỏ term không có trong chỉ mục và term trọng số 0."""
         qtf = Counter(t for t in terms if self.index.df(t) > 0)
         if not qtf:
             return {}
-        tf_code, df_code, norm_code = self.query_code
+        tf_code, df_code, norm_code = self.query_code[0], self.query_code[1], self.query_code[2]
         max_q = max(qtf.values())
         avg_q = sum(qtf.values()) / len(qtf)
         w = {
@@ -177,12 +182,14 @@ class SmartWeighting:
         return {t: x for t, x in w.items() if x != 0}
 
     def impact_fn(self, term: str) -> ImpactFn:
+        """Trọng số tài liệu theo ``doc_code``, đã chuẩn hoá."""
         tf_code = self.doc_code[0]
         dfw = smart_df(self.doc_code[1], self._n, self.index.df(term))
         max_tf, avg_tf, norm = self._max_tf, self._avg_tf, self._doc_norm
         return lambda d, tf: smart_tf(tf_code, tf, max_tf[d], avg_tf[d]) * dfw / norm[d]
 
     def contribution(self, term: str, qw: float) -> Contribution:
+        """Closure qw · impact; tf log có nhánh riêng để nhanh hơn."""
         tf_code = self.doc_code[0]
         dfw = smart_df(self.doc_code[1], self._n, self.index.df(term))
         max_tf, avg_tf, norm = self._max_tf, self._avg_tf, self._doc_norm

@@ -1,3 +1,6 @@
+import hashlib
+
+from hmr.common.config import load_config
 from hmr.common.tokenizer import make_analyzer, stopwords, tokenize
 
 
@@ -22,3 +25,11 @@ def test_stopwords_are_nltk_english() -> None:
 
 def test_analyzer_matches_tokenize() -> None:
     assert make_analyzer(stem=False)("Running dogs") == tokenize("Running dogs", stem=False)
+
+
+def test_stopwords_match_reference() -> None:
+    """Danh sách stopword trong nltk_data không pin version: lệch thì chỉ mục và mọi kết quả đều lệch."""
+    digest = hashlib.md5("\n".join(sorted(stopwords())).encode()).hexdigest()
+    assert digest == load_config()["data"]["checksums"]["stopwords"], (
+        f"Stopword NLTK ({len(stopwords())} từ) khác bản chuẩn 198 từ — tải lại: uv run python -m nltk.downloader stopwords"
+    )

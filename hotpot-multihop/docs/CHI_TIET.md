@@ -61,6 +61,8 @@ Lưu ý: toàn bộ dev của HotpotQA là `level=hard`; tách theo level chỉ 
 
 - Hop 2 **không** nằm trong top-100 của câu hỏi gốc: **19.73%**
 - Đối chứng: hop 1 không nằm trong top-100: 3.59%
+- Với `bm25_tuned` (k1 = 0.9, b = 1.0): hop 2 trượt **19.22%**, hop 1 trượt 3.53% — tinh chỉnh tham số
+  gần như không giải quyết được bài toán này
 
 ## Truy xuất thưa [M2 – Việt]
 
@@ -102,7 +104,7 @@ recall, k1 lớn có hại (80% postings có tf = 1 ⇒ bão hoà tf sớm là h
 
 idf là thành phần quan trọng nhất (lnc.lnc tụt 6.8 điểm R@100); tf log/augmented tốt hơn tf thô.
 Lnc.ltc trùng hệt lnc.ltc là đúng lý thuyết: hệ số 1/(1+log ave tf) là hằng số theo tài liệu,
-bị triệt tiêu khi chuẩn hoá cosine. BM25 hơn tf-idf tốt nhất ~4 điểm nDCG@10 / MRR.
+bị triệt tiêu khi chuẩn hoá cosine. BM25 hơn tf-idf tốt nhất 4.0 điểm nDCG@10 và 5.8 điểm MRR.
 
 **Champion list** (IIR 7.1.3; `champion.csv`) — xếp postings theo *impact* BM25 thay vì tf thô
 (80% postings có tf = 1). "Chấm lại" = tính điểm chính xác cho ứng viên bằng postings đầy đủ
@@ -118,8 +120,8 @@ tra qua skip pointer; overlap = tỉ lệ trùng top-k với BM25 vét cạn:
 | r = 500, xấp xỉ | 0.8520 | 0.6463 | 0.53 | 2.8 ms | 3 390 |
 
 r = 500: nhanh hơn 2.3×, chấm ít hơn 9× postings, mất 0.5 điểm R@100. Bước chấm lại chính xác
-đáng giá +5…+13 điểm nDCG@10 so với chỉ dùng điểm trong champion list. Mất mát khi r nhỏ dồn vào
-câu bridge (r = 200: bridge R@100 0.859 so với 0.890).
+đáng giá +4.6 (r = 1000) đến +18.3 (r = 50) điểm nDCG@10 so với chỉ dùng điểm trong champion list. Mất mát khi r nhỏ dồn vào
+câu bridge (r = 200: bridge R@100 0.859 so với 0.890, mất 3.1 điểm; comparison chỉ mất 0.6).
 
 **Chỉ mục phân tầng** (IIR 7.2.1; `tiered.csv`): **thua champion list ở mọi điểm vận hành.**
 Với quy tắc dừng của IIR (xuống tầng khi < k ứng viên), tầng 1 luôn đủ 100 ứng viên nhờ term phổ biến
@@ -141,8 +143,8 @@ so với không skip ở mọi cấu hình):
 | 64 | 81.2% | 98.6% |
 
 Bước nhỏ cố định (8) tốt hơn √P trên corpus này (postings đa số ngắn, ứng viên dày). Lưu ý trung thực:
-trong Python, giảm phép so sánh **không** chuyển thành giảm thời gian (nhánh skip tốn hơn phép so sánh
-tiết kiệm được: 618 ms so với 539 ms) — lợi ích thời gian của skip pointer cần cài đặt mức thấp (C/numpy)
+trong Python, giảm phép so sánh **không** đem lại lợi ích thời gian đáng kể (bước 8: AND 2 term chậm hơn,
+618 ms so với 539 ms; tra ứng viên nhanh hơn khoảng 1%, 905 ms so với 915 ms) — lợi ích thời gian của skip pointer cần cài đặt mức thấp (C/numpy)
 hoặc khi postings nằm trên đĩa. Bước skip khi chấm lại chỉnh được qua `pruning.skip_step` trong config.
 
 **Minh chứng kiểm thử** (mỗi bước có cổng kiểm tra; số liệu kiểm tra nằm trong test tự động và các file

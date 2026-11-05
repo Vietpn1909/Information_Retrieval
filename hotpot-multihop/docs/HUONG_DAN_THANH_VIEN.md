@@ -111,6 +111,8 @@ Kho: **105 862 đoạn**; chỉ mục `stem`: 192 823 term, độ dài đoạn t
 | `qrels.txt` | `6bc5a4c6fc74d1d481ce31d1643c7824` |
 
 Lưu trong `config/default.yaml` (`data.checksums`), kiểm tra tự động bằng `uv run pytest -m data`.
+Danh sách stopword NLTK (198 từ) cũng có md5 riêng, kiểm tra trong `tests/test_tokenizer.py`: `nltk_data` không
+pin version, nên máy có bản cũ sẽ ra chỉ mục khác mà không có lỗi nào nếu thiếu kiểm tra này.
 
 ### 2.6 Đặc điểm cần biết
 
@@ -146,7 +148,8 @@ Lưu trong `config/default.yaml` (`data.checksums`), kiểm tra tự động b�
 | Giao postings / skip | `hmr.index.skip`: `intersect`, `intersect_with_skips`, `SkipPostings` | |
 
 **Mốc cần vượt** (dev, run sâu 100): `bm25_tuned` R@100 = **0.9099**, nDCG@10 = **0.7214**;
-**19,73%** câu bridge có đoạn hop 2 nằm ngoài top-100 BM25 (`scripts/analyze_hop2.py`).
+**19,22%** câu bridge có đoạn hop 2 nằm ngoài top-100 của `bm25_tuned`
+(`uv run python scripts/analyze_hop2.py --retriever bm25_tuned`; bản `bm25` chưa tinh chỉnh là 19,73%).
 
 ## 4. Bản đồ sở hữu file
 

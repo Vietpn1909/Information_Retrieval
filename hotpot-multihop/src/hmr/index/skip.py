@@ -11,7 +11,9 @@ nén VByte, skip pointer cần lưu (doc_id, byte offset) theo khối để nh�
 
 from __future__ import annotations
 
+import logging
 import math
+import random
 from array import array
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -19,6 +21,9 @@ from dataclasses import dataclass
 from tqdm import tqdm
 
 from hmr.common.interfaces import Index
+from hmr.common.tokenizer import Analyzer
+
+logger = logging.getLogger(__name__)
 
 StepSpec = int | str  # số nguyên hoặc "sqrt"
 
@@ -173,3 +178,23 @@ def build_skip_table(index: Index, step: StepSpec = "sqrt", show_progress: bool 
         t: SkipPostings.from_postings(index.postings(t), step)
         for t in tqdm(terms, desc="Skip pointer", unit="term", leave=False, disable=not show_progress)
     }
+
+
+def sample_term_pairs(
+    index: Index, analyzer: Analyzer, texts: Sequence[str], n_pairs: int, rng: random.Random
+) -> set[tuple[str, str]]:
+    """Lấy mẫu tối đa ``n_pairs`` cặp term cùng xuất hiện trong một văn bản (truy vấn AND thật).
+
+    Giới hạn số lần thử: ít văn bản thì có thể không đủ cặp — trả ít hơn và cảnh báo, không treo.
+    """
+    pairs: set[tuple[str, str]] = set()
+    for _ in range(n_pairs * 100 if texts else 0):
+        if len(pairs) >= n_pairs:
+            break
+        terms = sorted({t for t in analyzer(rng.choice(texts)) if index.df(t) > 0})
+        if len(terms) >= 2:
+            first, second = rng.sample(terms, 2)
+            pairs.add((first, second))
+    if len(pairs) < n_pairs:
+        logger.warning("Chỉ lấy được %d/%d cặp term từ %d văn bản", len(pairs), n_pairs, len(texts))
+    return pairs

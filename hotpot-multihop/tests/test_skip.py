@@ -12,6 +12,7 @@ from hmr.index.skip import (
     intersect,
     intersect_with_skips,
     resolve_step,
+    sample_term_pairs,
     skip_step,
 )
 
@@ -87,3 +88,12 @@ def test_build_skip_table_mirrors_index(toy_index: InvertedIndex) -> None:
     assert table.keys() == set(toy_index.vocabulary())
     for term, sp in table.items():
         assert list(zip(sp.doc_ids, sp.tfs)) == toy_index.postings(term)
+
+
+def test_sample_term_pairs_never_hangs(toy_index: InvertedIndex) -> None:
+    """Ít văn bản không đủ cặp: phải dừng và trả ít hơn (lỗi cũ: ``skip --limit`` nhỏ bị treo)."""
+    texts = ["apple banana unknown", "cherry"]
+    pairs = sample_term_pairs(toy_index, str.split, texts, 100, random.Random(0))
+    assert pairs == {("apple", "banana"), ("banana", "apple")}
+    assert sample_term_pairs(toy_index, str.split, [], 5, random.Random(0)) == set()
+    assert len(sample_term_pairs(toy_index, str.split, texts, 1, random.Random(0))) == 1
