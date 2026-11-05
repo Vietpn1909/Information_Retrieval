@@ -31,8 +31,8 @@ def main() -> None:
     parser.add_argument("--depth", type=int, default=None, help="Mặc định analysis.hop2_depth")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--config-file", default=None)
-    args = parser.parse_args()
     setup_logging()
+    args = parser.parse_args()
 
     cfg = load_config(args.config_file)
     paths = cfg["paths"]

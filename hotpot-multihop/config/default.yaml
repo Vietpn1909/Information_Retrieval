@@ -1,5 +1,6 @@
-# Cấu hình mặc định. Đường dẫn tương đối được quy theo gốc repo.
-# Không hardcode tham số trong code — thêm khoá mới vào đây.
+# Cấu hình DÙNG CHUNG. Đường dẫn tương đối được quy theo gốc repo.
+# Không hardcode tham số trong code. Phần riêng của từng thành viên đặt trong
+# config/parts/<phần>.yaml (tự động gộp, trùng khoá sẽ báo lỗi) — xem docs/HUONG_DAN_THANH_VIEN.md.
 
 paths:
   data_dir: data
@@ -12,11 +13,18 @@ paths:
 data:
   hf_name: hotpotqa/hotpot_qa
   hf_config: distractor
+  # Pin phiên bản dataset trên HuggingFace để mọi máy dựng ra dữ liệu GIỐNG HỆT (cùng doc_id)
+  hf_revision: 1908d6afbbead072334abe2965f91bd2709910ab
   n_train: 5000          # số câu hỏi lấy mẫu từ train
   seed: 42
   dev_split: validation  # tên split dev trên HuggingFace
   # Lỗi gióng hàng supporting_facts -> doc_id: "error" dừng ngay; "drop" bỏ câu hỏi lỗi + log.
   on_alignment_error: error
+  # md5 của dữ liệu chuẩn — `uv run pytest -m data` kiểm tra dữ liệu dựng lại có khớp không
+  checksums:
+    corpus: 6a139d161d2206c9648e05e98bf7f024
+    questions: 8babcefff51d5115c77e6debd1f7ecbb
+    qrels: 6bc5a4c6fc74d1d481ce31d1643c7824
 
 # Biến thể chỉ mục (mỗi biến thể là một file data/index/<tên>.pkl).
 indexes:
@@ -44,8 +52,9 @@ retrievers:
     k1: 1.2
     b: 0.75
   tfidf:
-    type: tfidf     # SMART lnc.ltc
+    type: tfidf
     index: stem
+    scheme: lnc.ltc   # ký hiệu SMART ddd.qqq — xem retrieval/weighting.py
 
 retrieval:
   top_k: 10
@@ -55,6 +64,7 @@ eval:
   measures:
     P@5: P_5
     R@10: recall_10
+    R@100: recall_100
     MAP: map
     nDCG@10: ndcg_cut_10
     MRR: recip_rank

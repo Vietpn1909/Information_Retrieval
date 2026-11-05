@@ -26,7 +26,7 @@ def load_examples(data_cfg: Mapping[str, Any]) -> Iterator[tuple[str, Example]]:
     """
     from datasets import load_dataset
 
-    ds = load_dataset(data_cfg["hf_name"], data_cfg["hf_config"])
+    ds = load_dataset(data_cfg["hf_name"], data_cfg["hf_config"], revision=data_cfg.get("hf_revision"))
     train = ds["train"]
     idx = sample_indices(len(train), int(data_cfg["n_train"]), int(data_cfg["seed"]))
     logger.info("Lấy %d/%d câu train (seed=%s)", len(idx), len(train), data_cfg["seed"])

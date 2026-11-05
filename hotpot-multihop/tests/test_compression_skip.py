@@ -1,4 +1,7 @@
-"""Test nén + skip pointer. Các test đánh dấu xfail sẽ thành XPASS khi M1 cài xong."""
+"""Test nén postings [M1 – Nguyên]. Các test xfail sẽ thành XPASS khi M1 cài xong.
+
+Test skip pointer nằm ở ``tests/test_skip.py`` [M2 – Việt].
+"""
 
 import pytest
 
@@ -10,7 +13,6 @@ from hmr.index.compression import (
     vbyte_decode,
     vbyte_encode,
 )
-from hmr.index.skip import intersect, intersect_with_skips
 
 m1_todo = pytest.mark.xfail(raises=NotImplementedError, reason="M1 chưa cài", strict=False)
 
@@ -29,11 +31,6 @@ def test_unknown_codec() -> None:
         get_codec("zip")
 
 
-def test_intersect_two_pointers() -> None:
-    assert intersect([1, 3, 5, 7, 9], [2, 3, 4, 9, 10]) == [3, 9]
-    assert intersect([], [1]) == []
-
-
 @m1_todo
 def test_delta_roundtrip() -> None:
     assert delta_encode([3, 7, 12]) == [3, 4, 5]
@@ -45,9 +42,3 @@ def test_vbyte_roundtrip() -> None:
     values = [0, 5, 127, 128, 16384, 2**31 - 1]
     assert vbyte_decode(vbyte_encode(values)) == values
     assert vbyte_encode([5]) == bytes([0x85])  # IIR hình 5.8: bit cao = byte cuối
-
-
-@m1_todo
-def test_intersect_with_skips_matches_plain() -> None:
-    a, b = list(range(0, 1000, 3)), list(range(0, 1000, 7))
-    assert intersect_with_skips(a, b, 18, 12) == intersect(a, b)

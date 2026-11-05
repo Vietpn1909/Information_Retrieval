@@ -1,0 +1,13 @@
+21:55:11 INFO    run_retrieval | Đã ghi 7405 câu hỏi -> runs\sparse\runs\factory_bm25.txt | latency trung bình 18.1 ms, p95 45.4 ms
+FACTORY bm25: TRÙNG TỪNG BYTE với baseline_v0
+21:55:54 INFO    run_retrieval | Đã ghi 7405 câu hỏi -> D:\Information Retrieval\hotpot-multihop\runs\bm25_champion.txt | latency trung bình 4.8 ms, p95 10.7 ms
+group                  n       P@5      R@10     R@100       MAP   nDCG@10       MRR
+all                 7405    0.2755    0.7764    0.8840    0.6277    0.7157    0.8541
+21:56:56 INFO    run_retrieval | Đã ghi 7405 câu hỏi -> D:\Information Retrieval\hotpot-multihop\runs\bm25_tiered.txt | latency trung bình 7.1 ms, p95 18.5 ms
+group                  n       P@5      R@10     R@100       MAP   nDCG@10       MRR
+all                 7405    0.2334    0.6291    0.6865    0.5276    0.6098    0.7738
+champion exit=0
+tiered exit=0
+smart exit=0
+skip exit=0
+ALL_DONE

@@ -27,8 +27,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config-file", default=None, help="YAML cấu hình (mặc định config/default.yaml)")
     parser.add_argument("--n-train", type=int, default=None, help="Ghi đè data.n_train")
-    args = parser.parse_args()
     setup_logging()
+    args = parser.parse_args()
 
     cfg = load_config(args.config_file)
     data_cfg = dict(cfg["data"])

@@ -16,7 +16,7 @@ from tqdm import tqdm
 from hmr.common.config import load_config
 from hmr.common.io import read_jsonl, write_trec_run
 from hmr.common.log import setup_logging
-from hmr.retrieval.factory import SingleHopAdapter, build_retriever
+from hmr.retrieval.factory import build_system
 
 logger = logging.getLogger("run_retrieval")
 
@@ -29,8 +29,8 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None, help="Chỉ chạy N câu đầu (thử nhanh)")
     parser.add_argument("--out", default=None, help="Mặc định runs/<config>.txt")
     parser.add_argument("--config-file", default=None, help="YAML cấu hình (mặc định config/default.yaml)")
-    args = parser.parse_args()
     setup_logging()
+    args = parser.parse_args()
 
     cfg = load_config(args.config_file)
     paths = cfg["paths"]
@@ -40,7 +40,7 @@ def main() -> None:
         questions = questions[: args.limit]
     titles = [d["title"] for d in read_jsonl(paths["corpus"])]
 
-    system = SingleHopAdapter(build_retriever(cfg, args.config), titles, args.config)
+    system = build_system(cfg, args.config, titles)
     results = {}
     for q in tqdm(questions, desc=f"{args.config}@{k}", unit="q"):
         results[q["qid"]] = dataclasses.replace(system.search(q["question"], k), qid=q["qid"])

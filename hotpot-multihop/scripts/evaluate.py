@@ -26,8 +26,8 @@ def main() -> None:
     parser.add_argument("--split", choices=["dev", "train", "all"], default="dev", help="Tập câu hỏi được chấm")
     parser.add_argument("--json-out", default=None, help="Ghi kết quả tổng hợp ra JSON")
     parser.add_argument("--config-file", default=None, help="YAML cấu hình (mặc định config/default.yaml)")
-    args = parser.parse_args()
     setup_logging()
+    args = parser.parse_args()
 
     cfg = load_config(args.config_file)
     qrels = read_qrels(args.qrels or cfg["paths"]["qrels"])
