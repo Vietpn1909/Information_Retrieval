@@ -1,0 +1,16 @@
+{
+  "overlap@10": 0.3348,
+  "overlap@100": 0.1924,
+  "gold@10": {
+    "both": 0.7165,
+    "only_bm25": 0.0692,
+    "only_dense": 0.0903,
+    "neither": 0.1239
+  },
+  "gold@100": {
+    "both": 0.8685,
+    "only_bm25": 0.0413,
+    "only_dense": 0.0436,
+    "neither": 0.0465
+  }
+}

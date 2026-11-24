@@ -1,0 +1,41 @@
+{
+  "split": "train",
+  "n_queries": 5000,
+  "objective": "R@100",
+  "tiebreak": "nDCG@10",
+  "best": {
+    "rrf": {
+      "fusion": "rrf",
+      "rrf_k": 20,
+      "w_sparse": 1.0,
+      "w_dense": 1.5,
+      "n": 5000,
+      "P@5": 0.324,
+      "R@10": 0.863,
+      "R@100": 0.9438,
+      "MAP": 0.7497,
+      "nDCG@10": 0.8171,
+      "MRR": 0.921,
+      "bridge_R@100": 0.9303,
+      "bridge_nDCG@10": 0.7864,
+      "comparison_R@100": 1.0,
+      "comparison_nDCG@10": 0.9448
+    },
+    "linear": {
+      "fusion": "linear",
+      "norm": "zscore",
+      "alpha": 0.4,
+      "n": 5000,
+      "P@5": 0.3292,
+      "R@10": 0.8686,
+      "R@100": 0.9427,
+      "MAP": 0.7735,
+      "nDCG@10": 0.8346,
+      "MRR": 0.9383,
+      "bridge_R@100": 0.9289,
+      "bridge_nDCG@10": 0.8025,
+      "comparison_R@100": 1.0,
+      "comparison_nDCG@10": 0.968
+    }
+  }
+}

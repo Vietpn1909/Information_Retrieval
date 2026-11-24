@@ -90,8 +90,10 @@ def _cfg_with(retrievers: dict) -> dict:
     return {"paths": {}, "retrievers": retrievers}
 
 
-def test_missing_external_module_has_clear_error() -> None:
-    with pytest.raises(ValueError, match="hmr/retrieval/dense.py"):
+def test_missing_external_module_has_clear_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Module chưa tồn tại (dense.py đã được M3 cài nên dùng một tên giả)
+    monkeypatch.setitem(factory.EXTERNAL_BUILDERS, "dense", "hmr.retrieval._chua_cai:build")
+    with pytest.raises(ValueError, match="hmr/retrieval/_chua_cai.py"):
         build_retriever(_cfg_with({"d": {"type": "dense"}}), "d")
 
 

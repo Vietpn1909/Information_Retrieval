@@ -186,11 +186,11 @@ src/hmr/
                [M2]   skip.py (skip pointer)
   retrieval/   [M2]   weighting.py, scoring.py, merge.py, bm25.py, tfidf.py, bm25_grid.py,
                       pruning.py, champion.py, tiered.py, factory.py
-               [M3]   dense, hybrid: TODO
+               [M3]   dense.py, hybrid.py, rerank.py — xem DENSE.md
   multihop/    [M4]   trích thực thể, sinh truy vấn hop 2: TODO
   eval/        [M5]   metrics.py
 scripts/              build_corpus, build_index, run_retrieval, evaluate, analyze_hop2,
-                      sparse_experiments [M2]
+                      sparse_experiments [M2], build_dense + dense_experiments [M3]
 tests/
 ```
 
