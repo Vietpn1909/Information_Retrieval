@@ -1,0 +1,107 @@
+# [M3 – Khiêm] Truy xuất dày & lai — được gộp tự động vào config/default.yaml.
+
+paths:
+  dense_dir: data/dense     # vectơ đoạn văn đã mã hoá (không commit, dựng lại bằng build_dense.py)
+  dense_runs: runs/dense    # bảng kết quả thí nghiệm [M3]
+
+retrievers:
+  # ---- Truy xuất dày (bi-encoder + FAISS)
+  dense_bge: &dense_bge
+    type: dense
+    model: bge_small          # khoá trong dense.models
+    faiss: {kind: flat}       # tìm chính xác (inner product trên vectơ đã chuẩn hoá = cosine)
+  dense_bge_hnsw:             # ANN: đồ thị HNSW — nhanh hơn, xấp xỉ
+    <<: *dense_bge
+    faiss: {kind: hnsw, M: 32, ef_construction: 200, ef_search: 128}
+  dense_bge_ivf:              # ANN: phân cụm IVF
+    <<: *dense_bge
+    faiss: {kind: ivf, nlist: 1024, nprobe: 32}
+  dense_minilm:               # bi-encoder thứ hai để so sánh
+    type: dense
+    model: minilm
+    faiss: {kind: flat}
+
+  # ---- Lai (thưa + dày). rrf_k / weights / alpha dò trên train: runs/dense/hybrid_tune.csv
+  hybrid_rrf: &hybrid_rrf
+    type: hybrid
+    components: [bm25_tuned, dense_bge]
+    fusion: rrf               # Reciprocal Rank Fusion: Σ w_i / (rrf_k + rank_i)
+    rrf_k: 20                 # dò trên train (runs/dense/hybrid_best.json)
+    weights: [1.0, 1.5]       # [bm25, dense]
+    depth: 200                # số ứng viên lấy từ mỗi thành phần trước khi gộp
+  hybrid_linear:
+    <<: *hybrid_rrf
+    fusion: linear            # alpha·norm(bm25) + (1-alpha)·norm(dense)
+    norm: zscore              # dò trên train (runs/dense/hybrid_best.json)
+    alpha: 0.4                # trọng số bm25; dense = 1 - alpha
+
+  # ---- Xếp hạng lại bằng cross-encoder. Reranker / depth / combine dò trên train:
+  #      runs/dense/rerank_tune.csv, rerank_best.json
+  rerank_hybrid: &rerank_hybrid
+    type: rerank
+    base: hybrid_rrf          # bộ truy xuất sinh ứng viên
+    model: bge_reranker       # khoá trong dense.rerankers
+    rerank_depth: 100         # chỉ chấm lại top-N ứng viên (phần còn lại giữ thứ tự base)
+  rerank_bm25:
+    <<: *rerank_hybrid
+    base: bm25_tuned
+  rerank_hybrid_minilm:       # reranker nhỏ, nhanh (~6x) — cần gộp RRF với thứ hạng base mới có lợi
+    <<: *rerank_hybrid
+    model: ce_minilm
+    rerank_depth: 50
+    combine: {rrf_k: 20, ce_weight: 1.0}
+
+dense:
+  # Bi-encoder. Đoạn văn được mã hoá dưới dạng passage_format (giống chỉ mục thưa: title + text).
+  models:
+    bge_small:
+      name: BAAI/bge-small-en-v1.5
+      query_prefix: "Represent this sentence for searching relevant passages: "
+      passage_prefix: ""
+      max_length: 512
+    minilm:
+      name: sentence-transformers/all-MiniLM-L6-v2
+      query_prefix: ""
+      passage_prefix: ""
+      max_length: 256
+  rerankers:
+    ce_minilm:
+      name: cross-encoder/ms-marco-MiniLM-L-6-v2
+      max_length: 256
+    bge_reranker:
+      name: BAAI/bge-reranker-base
+      max_length: 256
+  passage_format: "{title}. {text}"
+  batch_size: 64
+  device: cpu               # "cuda" nếu có GPU
+  threads: null             # số luồng torch/faiss; null = mặc định
+
+  # Thí nghiệm — scripts/dense_experiments.py
+  experiments:
+    depth: 100              # độ sâu run (cần cho R@100)
+    candidate_depth: 200    # độ sâu lấy từ mỗi thành phần khi dò hybrid
+    tune_split: train       # dò tham số trên train, KHÔNG dùng dev
+    objective: R@100
+    tiebreak: nDCG@10
+    rrf_k: [1, 10, 20, 40, 60, 100, 200]
+    rrf_weights: [[1.0, 1.0], [1.0, 1.5], [1.0, 2.0], [1.5, 1.0], [2.0, 1.0]]
+    alpha: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    norms: [minmax, zscore]
+    rerank_tune_questions: 1000   # số câu train dùng dò rerank (cross-encoder chậm trên CPU)
+    rerank_bases: [bm25_tuned, hybrid_rrf]
+    rerank_models: [ce_minilm, bge_reranker]
+    rerank_depths: [10, 20, 50, 100]
+    rerank_combine:               # ngoài "chỉ dùng điểm cross-encoder" (không gộp)
+      - {rrf_k: 20, ce_weight: 1.0}
+      - {rrf_k: 20, ce_weight: 2.0}
+      - {rrf_k: 60, ce_weight: 1.0}
+      - {rrf_k: 60, ce_weight: 2.0}
+      - {rrf_k: 60, ce_weight: 0.5}
+    rerank_objective: nDCG@10
+    ann:
+      hnsw_ef_search: [16, 32, 64, 128, 256]
+      ivf_nprobe: [1, 4, 16, 32, 64, 128]
+    both_gold_k: [2, 5, 10, 20, 100]
+    latency_questions: 200        # số câu dev đo latency từng câu qua Retriever.search
+    eval_configs: [bm25_tuned, dense_minilm, dense_bge, hybrid_linear, hybrid_rrf,
+                   rerank_bm25, rerank_hybrid_minilm, rerank_hybrid]   # tỉ lệ câu có CẢ 2 đoạn vàng trong top-k

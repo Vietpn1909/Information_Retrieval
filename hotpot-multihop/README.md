@@ -49,7 +49,7 @@ interface giữa các module. Các thành viên phát triển phần của mình
 |---|---|---|
 | Nguyên | Chỉ mục ngược, chuẩn hoá văn bản, nén postings (delta + VByte) | Chưa bắt đầu |
 | Việt | Truy xuất thưa: TF-IDF, BM25, tinh chỉnh k1/b, skip pointer, champion list, chỉ mục phân tầng | ✅ Xong |
-| Khiêm | Truy xuất dày & lai: BGE-small, FAISS, RRF, rerank bằng cross-encoder | Chưa bắt đầu |
+| Khiêm | Truy xuất dày & lai: BGE-small, FAISS, RRF, rerank bằng cross-encoder | ✅ Xong |
 | Cường | Truy xuất đa bước: sinh truy vấn bước 2, thực thể cầu nối, điều kiện dừng | Chưa bắt đầu |
 | Vinh | Đánh giá & demo: harness chấm điểm, ablation, đồ thị, phân tích lỗi, giao diện | Chưa bắt đầu |
 
@@ -60,8 +60,12 @@ interface giữa các module. Các thành viên phát triển phần của mình
 | TF-IDF (lnc.ltc) | 0.909 | 0.683 | ~20 ms |
 | BM25 đã tinh chỉnh | **0.910** | **0.721** | ~19 ms |
 | BM25 + champion list (r = 500) | 0.905 | 0.721 | **~8 ms** |
+| Dense BGE-small (FAISS flat) | 0.912 | 0.776 | ~21 ms |
+| Lai BM25 + dense (RRF) | **0.943** | 0.805 | ~46 ms |
+| Lai + rerank bge-reranker-base (top-100) | **0.943** | **0.882** | ~180 ms (GPU) |
 
-Các con số này là **mốc cơ sở**: phần truy xuất dày và đa bước sẽ được so sánh với chúng.
+Truy xuất lai giảm tỉ lệ câu bridge có đoạn hop 2 trượt top-100 từ 19,2% xuống **12,8%**; phần
+còn lại là việc của truy xuất đa bước. Chi tiết phần dày & lai: [docs/DENSE.md](docs/DENSE.md).
 
 ## Chạy thử
 
@@ -91,3 +95,4 @@ docs/        tài liệu chi tiết
 - **Thành viên nhóm — đọc trước khi code:** [docs/HUONG_DAN_THANH_VIEN.md](docs/HUONG_DAN_THANH_VIEN.md)
   (đặc tả dữ liệu, những gì đã có, ai sở hữu file nào, cách thêm phần mới mà không conflict).
 - **Chi tiết cài đặt, toàn bộ bảng số liệu và minh chứng kiểm thử:** [docs/CHI_TIET.md](docs/CHI_TIET.md).
+- **Truy xuất dày & lai (dense, hybrid, rerank):** [docs/DENSE.md](docs/DENSE.md).
